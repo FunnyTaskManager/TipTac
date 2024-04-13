@@ -482,23 +482,30 @@ local function ModifyUnitTooltip()
 	end
 
 	if UnitIsPlayer(unit) then
-		ItemLevelMixIn:Request(unit)
-
-		local unitGUID = UnitGUID(unit)
-		local tooltipLine = TOOLTIP_UNIT_LEVEL_ILEVEL_LABEL
-
-		if unitGUID then
-			local itemLevel = ItemLevelMixIn:GetItemLevel( unitGUID )
-			if itemLevel then
-				local color = GetItemLevelColor(itemLevel)
-
-				if color then
-					tooltipLine = string.gsub(TOOLTIP_UNIT_LEVEL_ILEVEL_LABEL, TOOLTIP_UNIT_LEVEL_ILEVEL_LOADING_LABEL, color:WrapTextInColorCode(itemLevel))
-				end
+		do
+			local zodiacID, zodiacName, zodiacDescription, zodiacIcon, zodiacAtlas = C_Unit.GetZodiacByDebuff(unit)
+			if zodiacName then
+				lineInfo[#lineInfo + 1] = "\n|cffFFFFFF"..zodiacName.."|r";
 			end
 		end
-
+	
 		if not UnitIsEnemy("player", unit) then
+			ItemLevelMixIn:Request(unit)
+
+			local unitGUID = UnitGUID(unit)
+			local tooltipLine = TOOLTIP_UNIT_ITEM_LEVEL_LABEL:gsub("[%(%)]", "")
+
+			if unitGUID then
+				local itemLevel = ItemLevelMixIn:GetItemLevel(unitGUID)
+				if itemLevel then
+					local color = GetItemLevelColor(itemLevel)
+
+					if color then
+						tooltipLine = string.gsub(tooltipLine, TOOLTIP_UNIT_ITEM_LEVEL_LABEL, strconcat("%1: ", color:WrapTextInColorCode(itemLevel)))
+					end
+				end
+			end
+
 			lineInfo[#lineInfo + 1] = "\n|cffFFFFFF"..tooltipLine.."|r";
 		end
 	end
