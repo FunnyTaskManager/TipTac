@@ -481,29 +481,22 @@ local function ModifyUnitTooltip()
 		end
 	end
 
-	if UnitIsPlayer(unit) then
+	if u.isPlayer then
 		do
 			local zodiacID, zodiacName, zodiacDescription, zodiacIcon, zodiacAtlas = C_Unit.GetZodiacByDebuff(unit)
 			if zodiacName then
 				lineInfo[#lineInfo + 1] = "\n|cffFFFFFF"..zodiacName.."|r";
 			end
 		end
-	
+
 		if not UnitIsEnemy("player", unit) then
-			ItemLevelMixIn:Request(unit)
-
-			local unitGUID = UnitGUID(unit)
 			local tooltipLine = TOOLTIP_UNIT_ITEM_LEVEL_LABEL:gsub("[%(%)]", "")
-
-			if unitGUID then
-				local itemLevel = ItemLevelMixIn:GetItemLevel(unitGUID)
-				if itemLevel then
-					local color = GetItemLevelColor(itemLevel)
-
-					if color then
-						tooltipLine = string.gsub(tooltipLine, TOOLTIP_UNIT_ITEM_LEVEL_LABEL, strconcat("%1: ", color:WrapTextInColorCode(itemLevel)))
-					end
-				end
+			local avgItemLevel = C_Inspect.GetAvgItemLevel(unit)
+			if avgItemLevel then
+				local color = GetItemLevelColor(avgItemLevel)
+				tooltipLine = string.gsub(tooltipLine, TOOLTIP_UNIT_ITEM_LEVEL_LABEL, strconcat("%1: ", color:WrapTextInColorCode(avgItemLevel)))
+			else
+			--	C_Inspect.RequestAvgItemLevel(unit) -- request and update are handled in original tooltip code
 			end
 
 			lineInfo[#lineInfo + 1] = "\n|cffFFFFFF"..tooltipLine.."|r";
