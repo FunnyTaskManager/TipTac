@@ -133,7 +133,17 @@ local TT_TipsToModify = {
 	"ShoppingTooltip2",
 	"ShoppingTooltip3",
 	"ItemRefTooltip",
+	"ItemRefShoppingTooltip1",
+	"ItemRefShoppingTooltip2",
+	"ItemRefShoppingTooltip3",
 	"WorldMapTooltip",
+	"WorldMapCompareTooltip1",
+	"WorldMapCompareTooltip2",
+	"WorldMapCompareTooltip3",
+	"EncounterJournalTooltip",
+	"SmallTextTooltip",
+	"QuickKeybindTooltip",
+	"FriendsTooltip",
 	"AtlasLootTooltip",
 	"QuestHelperTooltip",
 	"QuestGuru_QuestWatchTooltip",
@@ -192,6 +202,7 @@ local lineInfo = {};
 local targetedList = {};
 local auras = {};
 local bars = {};
+local defaultAnchoredTips = {};
 local tipIcon;
 
 --------------------------------------------------------------------------------------------------------
@@ -690,6 +701,23 @@ local function CreateAura()
 	return aura;
 end
 
+local TT_ServiceAuraLists = {
+	"FACTION_OVERRIDE_BY_DEBUFFS",
+	"ZODIAC_DEBUFFS",
+	"S_CATEGORY_SPELL_ID",
+	"S_VIP_STATUS_DATA",
+	"S_PREMIUM_SPELL_ID",
+};
+
+local function IsServiceAura(spellID)
+	for _, name in ipairs(TT_ServiceAuraLists) do
+		local list = _G[name];
+		if (list) and (list[spellID]) then
+			return true;
+		end
+	end
+end
+
 -- The outer variable "pos" is the actual index of the shown auras we are actually going to use, in case certain auras are filtered. The "index" variable is for querying the auras.
 local function SetupAuras()
 	-- Init
@@ -699,11 +727,11 @@ local function SetupAuras()
 	if (cfg.showBuffs) then
 		local index = 1;
 		while (true) do
-			local _, _, iconTexture, count, debuffType, duration, endTime, casterUnit = UnitAura(u.token,index,"HELPFUL");
+			local _, _, iconTexture, count, debuffType, duration, endTime, casterUnit, _, _, spellID = UnitAura(u.token,index,"HELPFUL");
 			if (not iconTexture) or (pos / maxAuras > cfg.auraMaxRows) then
 				break;
 			end
-			if (not cfg.selfAurasOnly or casterUnit == "player" or casterUnit == "pet" or casterUnit == "vehicle") then
+			if (not IsServiceAura(spellID)) and (not cfg.selfAurasOnly or casterUnit == "player" or casterUnit == "pet" or casterUnit == "vehicle") then
 				local aura = auras[pos] or CreateAura();
 				-- Anchor It
 				aura:ClearAllPoints();
@@ -747,11 +775,11 @@ local function SetupAuras()
 		local lineOffset = floor(buffCount / maxAuras);
 		local buffsOnFirstLine = (maxAuras - buffCount % maxAuras);
 		while (true) do
-			local _, _, iconTexture, count, debuffType, duration, endTime, casterUnit = UnitAura(u.token,index,"HARMFUL");
+			local _, _, iconTexture, count, debuffType, duration, endTime, casterUnit, _, _, spellID = UnitAura(u.token,index,"HARMFUL");
 			if (not iconTexture) or (pos / maxAuras > cfg.auraMaxRows) then
 				break;
 			end
-			if (not cfg.selfAurasOnly or casterUnit == "player" or casterUnit == "pet" or casterUnit == "vehicle") then
+			if (not IsServiceAura(spellID)) and (not cfg.selfAurasOnly or casterUnit == "player" or casterUnit == "pet" or casterUnit == "vehicle") then
 				local aura = auras[pos] or CreateAura();
 				-- Anchor It
 				aura:ClearAllPoints();
@@ -825,14 +853,12 @@ local function GetAnchorPosition()
 end
 
 -- HOOK: GTT:Show -- If there are any bar offsets, resize the tip
-local gttShow = gtt.Show;
-gtt.Show = function(self,...)
-	gttShow(self,...);
+hooksecurefunc(gtt,"Show",function(self)
 	if (bars.offset) then
 		gtt_newHeight = (self:GetHeight() + bars.offset);
 		self:SetHeight(gtt_newHeight);
 	end
-end
+end);
 
 -- HOOK: GTT:FadeOut -- This allows us to check when the tip is fading out.
 local gttFadeOut = gtt.FadeOut;
@@ -954,6 +980,10 @@ end
 local function TipHook_OnHide(self,...)
 	self:SetBackdropColor(unpack(cfg.tipColor));				-- Default: For most: (0.1,0.1,0.2), World Objects?: (0,0.2,0.35)
 	self:SetBackdropBorderColor(unpack(cfg.tipBorderColor));	-- Default: (1,1,1,1)
+	if (defaultAnchoredTips[self]) then
+		defaultAnchoredTips[self] = nil;
+		self:SetScale(cfg.gttScale);
+	end
 end
 
 -- OnTooltipSetItem Script -- For item colored border
@@ -993,6 +1023,11 @@ function tt:HookTips()
 		end
 		-- Position Tip to Normal, Mouse or Parent anchor
 		gtt_anchorType, gtt_anchorPoint = GetAnchorPosition();
+		tooltip:SetScale(cfg.gttScale * (GameTooltipDefaultContainer and GameTooltipDefaultContainer:GetScale() or 1));
+		defaultAnchoredTips[tooltip] = true;
+		if (gtt_anchorType ~= "mouse") and (gtt_anchorType ~= "parent") and (GameTooltipDefaultContainer) then
+			return;
+		end
 		tooltip:SetOwner(parent,"ANCHOR_NONE");
 		if (gtt_anchorType == "mouse") then
 			tt:AnchorFrameToMouse(tooltip);
@@ -1001,7 +1036,6 @@ function tt:HookTips()
 		else
 			tooltip:SetPoint(gtt_anchorPoint,tt);
 		end
-		tooltip.default = 1;
 	end);
 	-- Clear this function as it's not needed anymore
 	self.HookTips = nil;

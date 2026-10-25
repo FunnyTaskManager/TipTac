@@ -11,7 +11,7 @@ TipTacDropDowns.FontFlags = {
 	["Thick Outline"] = "THICKOUTLINE",
 };
 TipTacDropDowns.AnchorType = {
-	["Normal Anchor"] = "normal",
+	[GameTooltipDefaultContainer and "Normal Anchor (Edit Mode)" or "Normal Anchor"] = "normal",
 	["Mouse Anchor"] = "mouse",
 	["Parent Anchor"] = "parent",
 };
